@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<style>
+			html, body
+				{
+					width: 95%;
+					height: 95%;
+				}
+			table
+				{
+					position: absolute;
+					height: 50%;
+					width: 50%;
+					left: 25%;
+					top: 10%;
+				}
+			h1
+				{
+					text-align: center;
+				}
+			td
+				{
+					width: 15vw;
+					height: 13vh;
+					border: 3px solid black;
+					text-align: center;
+				}
+			td:hover
+				{
+					border: 3px solid red;
+				}
+			img
+				{
+					width: 40px;
+					height: 40px;
+				}
+			#UI
+				{
+					position: absolute;
+					left: 80%;
+					top: 10%;
+				}
+			#UI, td
+				{
+					width: 200px;
+				}
+			#damageDisplay
+				{
+					position: absolute;
+					top: 20%;
+				}
+			#abilities
+				{
+					position: absolute;
+					top: 80%;
+				}
+			#ferret
+				{
+					width: 100px;
+					height: 100px;
+					border-color: red;
+				}
+			#rhino
+				{
+					width: 100px;
+					height: 100px;
+				}
+			#leopard
+				{
+					width: 100px;
+					height: 100px;
+				}
+			#dog
+				{
+					width: 100px;
+					height: 100px;
+				}
+			#poacher
+				{
+					width: 100px;
+					height: 100px;
+				}
+		</style>
+		<script>
+			function initialize()
+				{
+					cardNames=["Plains", "Plains", "Plains", "Plains", "Plains", "Forest", "Forest", "Forest", "Forest", "Forest", "Forest", "Forest", "Forest", "Forest", "Forest", "Caverns", "Caverns", "Caverns", "Caverns", "Caverns", "Oasis", "Oasis", "Oasis", "Oasis", "Oasis", "Mountains", "Mountains", "Mountains", "Mountains", "Jungle", "Jungle", "Jungle", "Jungle", "Jungle"];
+					turn=0;
+					minForRetreat=30;
+					hunter={"name":"Poacher","src":"<img src='Poacher.png'/>","x":6,"y":6,"health":100,"damageMin":15,"damageMax":20};
+					animal1={"name":"Black Footed Ferret","src":"<img src='Black Footed Ferret.png'/>","x":1,"y":1,"health":30,"damageMin":1,"damageMax":5,"moves":2};
+					animal2={"name":"Black Rhino","src":"<img src='Black Rhino.png'/>","x":3,"y":3,"health":75,"damageMin":5,"damageMax":15,"moves":1};
+					animal3={"name":"Amur Leopard","src":"<img src='Amur Leopard.png'/>","x":6,"y":1,"health":50,"damageMin":15,"damageMax":20,"moves":3};
+					animal4={"name":"African Wild Dog","src":"<img src='African Wild Dog.png'/>","x":1,"y":6,"health":50,"damageMin":10,"damageMax":10,"moves":4};
+					animals=[animal1, animal2, animal3, animal4];
+					for (var x=1; x<=6; x++)
+						for (var y=1; y<=6; y++)
+							{
+								if (!((x==1 && y==1) || (x==1 && y==6) || (x==6 && y==1) || (x==3 && y==3)))
+									{
+										chosenCard=cardNames.splice(getRandomInt(0, cardNames.length-1), 1);
+										document.getElementById(x.toString()+y.toString()).location=chosenCard + "<br/>";
+									}
+							}
+					searchCooldown=5;
+					healCooldown=10;
+					tankCooldown=7;
+					pounceCooldown=7;
+					tempTankHealth=0;
+					refresh();
+				}
+			function getRandomInt(min, max)
+				{
+					multiplier=max-(min-1);
+					return parseInt(Math.random()*multiplier)+min;
+				}
+			function move(X,Y)
+				{
+					if (isLegalMove(turn,X,Y))
+						{
+							document.getElementById("hunterMoved").innerHTML="";
+							document.getElementById("damageDisplay").innerHTML="";
+							if (turn==0)
+								document.getElementById("turn").innerHTML="Black Rhino";
+							if (turn==1)
+								document.getElementById("turn").innerHTML="Amur Leopard";
+							if (turn==2)
+								document.getElementById("turn").innerHTML="African Wild Dog";
+							if (turn==3)
+								document.getElementById("turn").innerHTML="Black Footed Ferret";
+							if (animals[turn].health!=0)
+								{
+									animals[turn].x=X;
+									animals[turn].y=Y;
+									checkBATTLE();
+								}
+							if (turn!=3)
+								if (animals[turn+1].health==0)
+									document.getElementById("hunterMoved").innerHTML+="Click to Continue<br/>";
+							if (turn==3)
+								if (animals[0].health==0)
+									document.getElementById("hunterMoved").innerHTML+="Click to Continue<br/>";
+							hunterMove();
+							turn++;
+							if (turn==4)
+								turn=0;
+							searchCooldown--;
+							healCooldown--;
+							tankCooldown--;
+							pounceCooldown--;
+							if (searchCooldown<0)
+								searchCooldown=0;
+							if (healCooldown<0)
+								healCooldown=0;
+							if (tankCooldown<0)
+								tankCooldown=0;
+							if (pounceCooldown<0)
+								pounceCooldown=0;
+							if (tempTankHealth>0 && animals[1].health>0)
+								animals[1].health=tempTankHealth;
+							if (animals[2].health>0)
+								{
+									animals[2].moves=3;
+									animals[2].damageMin=15;
+								}
+							refresh();
+						}
+					else
+						document.getElementById("hunterMoved").innerHTML="INVALID MOVE";
+				}
+			function evaluateHunterState()
+				{
+					if (hunter.health<minForRetreat)
+						{
+							minForRetreat=minForRetreat-3;
+							return "defensive";
+						}
+					else if (hunter.health>50)
+						return "aggressive";
+					else
+						return "passive";
+				}
+			function hunterMove()
+				{
+					if (hunter.health<minForRetreat)
+						hunter.health+=3;
+					else
+						if (hunter.health<100)
+							hunter.health++;
+					for (x=1; x<=6; x++)
+						for (y=1; y<=6; y++)
+							document.getElementById(x.toString()+y.toString()).style.backgroundColor="white";
+					target=animals[getRandomInt(0,3)];
+					while (target.health==0)
+						target=animals[getRandomInt(0,3)];		
+					if (evaluateHunterState()=="aggressive")				
+						{
+							if (hunter.x<target.x)
+								hunter.x++;
+							else
+								hunter.x--;
+							if (hunter.y<target.y)
+								hunter.y++;
+							else
+								hunter.y--;
+							document.getElementById(getRandomInt(1,6).toString() + getRandomInt(1,6).toString()).style.backgroundColor="#fff389";
+						}
+					if (evaluateHunterState()=="defensive")
+						{
+							if (hunter.x<target.x)
+								hunter.x--;
+							else
+								hunter.x++;
+							if (hunter.y<target.y)
+								hunter.y--;
+							else
+								hunter.y++;
+							document.getElementById(getRandomInt(1,6).toString() + getRandomInt(1,6).toString()).style.backgroundColor="#fff389";
+							document.getElementById(getRandomInt(1,6).toString() + getRandomInt(1,6).toString()).style.backgroundColor="#fff389";
+							document.getElementById(getRandomInt(1,6).toString() + getRandomInt(1,6).toString()).style.backgroundColor="#fff389";
+						}
+					if (evaluateHunterState()=="passive")
+						{
+							if (Math.random()>.5)
+								hunter.x++;
+							else
+								hunter.x--;
+							if (Math.random()>.5)
+								hunter.y++;
+							else
+								hunter.y--;
+							document.getElementById(getRandomInt(1,6).toString() + getRandomInt(1,6).toString()).style.backgroundColor="#fff389";
+							document.getElementById(getRandomInt(1,6).toString() + getRandomInt(1,6).toString()).style.backgroundColor="#fff389";
+						}	
+					if (hunter.x>6)
+						hunter.x=6;
+					if (hunter.x<1)
+						hunter.x=1;
+					if (hunter.y>6)
+						hunter.y=6;
+					if (hunter.y<1)
+						hunter.y=1;
+					if (document.getElementById(hunter.x.toString() + hunter.y.toString()).innerHTML.includes("Caverns"))
+						document.getElementById(getRandomInt(1,6).toString() + getRandomInt(1,6).toString()).style.backgroundColor="#fff389";
+					else
+						document.getElementById(hunter.x.toString() + hunter.y.toString()).style.backgroundColor="#fff389";
+					checkBATTLE();
+					refresh();
+				}
+			function checkBATTLE()
+				{
+					for (i=0; i<=3; i++)
+						if ((hunter.x==animals[i].x) && (hunter.y==animals[i].y) && (animals[i].damageMin!=0))
+							{
+								animalDamage=getRandomInt(hunter.damageMin, hunter.damageMax);
+								hunterDamage=getRandomInt(animals[i].damageMin, animals[i].damageMax);
+								if (document.getElementById(hunter.x.toString() + hunter.y.toString()).innerHTML.includes("Mountains"))
+									{
+										animalDamage=parseInt(animalDamage * .9);
+										hunterDamage=parseInt(hunterDamage * .9);
+									}
+								if (document.getElementById(hunter.x.toString() + hunter.y.toString()).innerHTML.includes("Plains"))
+									{
+										animalDamage=parseInt(animalDamage * 1.1);
+										hunterDamage=parseInt(hunterDamage * 1.1);
+									}
+								animals[i].health-=animalDamage;
+								hunter.health-=hunterDamage;
+								document.getElementById("damageDisplay").innerHTML+=animals[i].name + " took " + animalDamage + " damage.<br />";
+								document.getElementById("damageDisplay").innerHTML+="The hunter took " + hunterDamage + " damage.<br />";
+								if (animals[i].health<=0)
+									{
+										document.getElementById(i.toString() + "Shader").style.backgroundColor="#c40000";
+										animals[i].health=0;
+										animals[i].damageMin=0;
+										animals[i].moves=100;
+									}
+							}
+					if (hunter.health<=0)
+						window.location.href="win.html";
+					if (animals[0].health==0 && animals[1].health==0 && animals[2].health==0 && animals[3].health==0)
+						window.location.href="lose.html";
+				}
+			function isLegalMove(turn,X,Y)
+				{	
+					changes=Math.abs(X-animals[turn].x)+Math.abs(Y-animals[turn].y);
+					if (turn==0 && animals[0].moves>=changes)
+						return true;
+					else if (turn==1 && animals[1].moves>=changes)
+						return true;
+					else if (turn==2 && animals[2].moves>=changes)
+						return true;
+					else if (turn==3 && animals[3].moves>=changes)
+						return true;
+					else
+						return false;
+				}
+			function heal()
+				{
+					if (healCooldown==0 && animals[0].health>0)
+						{
+							healCooldown=10;
+							document.getElementById("healCooldown").innerHTML=healCooldown;
+							for (i=0; i<=3; i++)
+								animals[i].health+=5;
+						}
+				}
+			function tank()
+				{
+					if (tankCooldown==0 && animals[1].health>0)
+						{
+							tankCooldown=7;
+							document.getElementById("tankCooldown").innerHTML=tankCooldown;
+							tempTankHealth=animals[1].health;
+							animals[1].health=100;
+						}
+				}
+			function pounce()
+				{
+					if (pounceCooldown==0 && animals[2].health>0)
+						{
+							pounceCooldown=7;
+							document.getElementById("pounceCooldown").innerHTML=pounceCooldown;
+							animals[2].moves=100;
+							animals[2].damageMin=20;
+						}
+				}
+			function search()
+				{
+					if (searchCooldown==0 && animals[3].health>0)
+						{
+							searchCooldown=5;
+							document.getElementById("searchCooldown").innerHTML=searchCooldown;
+							document.getElementById(hunter.x.toString() +hunter.y.toString()).innerHTML+=hunter.src;
+						}
+				}
+			function refresh()
+				{
+					document.getElementById("heal").disabled=true;
+					document.getElementById("tank").disabled=true;
+					document.getElementById("pounce").disabled=true;
+					document.getElementById("search").disabled=true;
+					document.getElementById("healCooldown").innerHTML=healCooldown;
+					document.getElementById("tankCooldown").innerHTML=tankCooldown;
+					document.getElementById("pounceCooldown").innerHTML=pounceCooldown;
+					document.getElementById("searchCooldown").innerHTML=searchCooldown;
+					if (turn==0 &&  healCooldown==0)
+						document.getElementById("heal").disabled=false;
+					if (turn==1 &&  tankCooldown==0)
+						document.getElementById("tank").disabled=false;
+					if (turn==2 && pounceCooldown==0)
+						document.getElementById("pounce").disabled=false;
+					if (turn==3 && searchCooldown==0)
+						document.getElementById("search").disabled=false;
+					for (var x=1; x<=6; x++)
+						for (var y=1; y<=6; y++)
+							{
+								if ((x==1 && y==1) || (x==1 && y==6) || (x==6 && y==1) || (x==3 && y==3))
+									{
+										document.getElementById(x.toString()+y.toString()).location="Cage<br/>";
+										document.getElementById(x.toString()+y.toString()).innerHTML=document.getElementById(x.toString()+y.toString()).location;
+									}
+								else if (x==6 && y==6)
+									{
+										document.getElementById(x.toString()+y.toString()).location="Poacher Post<br/>";
+										document.getElementById(x.toString()+y.toString()).innerHTML=document.getElementById(x.toString()+y.toString()).location;
+									}
+								else
+									document.getElementById(x.toString()+y.toString()).innerHTML=document.getElementById(x.toString()+y.toString()).location;
+							}
+					for (var i=0; i<=3; i++)
+						{
+							if (animals[i].health!=0)
+								document.getElementById(animals[i].x.toString()+animals[i].y.toString()).innerHTML+=animals[i].src;
+							if (document.getElementById(animals[i].x.toString() + animals[i].y.toString()).innerHTML.includes("Oasis"))
+								animals[i].health+=2;
+							if (document.getElementById(animals[i].x.toString() + animals[i].y.toString()).innerHTML.includes("Jungle"))
+								animals[i].health+=3;
+							document.getElementById("animal" + i + "HP").innerHTML=animals[i].health;
+						}
+					document.getElementById("hunterHP").innerHTML=hunter.health;
+				}
+		</script>
+	</head>
+	<body onload="initialize();">
+		<h1>Evolve</h1>
+		<table>
+			<tr><td id="11" onclick="move(1,1);"></td><td id="21" onclick="move(2,1);"></td><td id="31" onclick="move(3,1);"></td><td id="41" onclick="move(4,1);"></td><td id="51" onclick="move(5,1);"></td><td id="61" onclick="move(6,1);"></td></tr>
+			<tr><td id="12" onclick="move(1,2);"></td><td id="22" onclick="move(2,2);"></td><td id="32" onclick="move(3,2);"></td><td id="42" onclick="move(4,2);"></td><td id="52" onclick="move(5,2);"></td><td id="62" onclick="move(6,2);"></td></tr>
+			<tr><td id="13" onclick="move(1,3);"></td><td id="23" onclick="move(2,3);"></td><td id="33" onclick="move(3,3);"></td><td id="43" onclick="move(4,3);"></td><td id="53" onclick="move(5,3);"></td><td id="63" onclick="move(6,3);"></td></tr>
+			<tr><td id="14" onclick="move(1,4);"></td><td id="24" onclick="move(2,4);"></td><td id="34" onclick="move(3,4);"></td><td id="44" onclick="move(4,4);"></td><td id="54" onclick="move(5,4);"></td><td id="64" onclick="move(6,4);"></td></tr>
+			<tr><td id="15" onclick="move(1,5);"></td><td id="25" onclick="move(2,5);"></td><td id="35" onclick="move(3,5);"></td><td id="45" onclick="move(4,5);"></td><td id="55" onclick="move(5,5);"></td><td id="65" onclick="move(6,5);"></td></tr>
+			<tr><td id="16" onclick="move(1,6);"></td><td id="26" onclick="move(2,6);"></td><td id="36" onclick="move(3,6);"></td><td id="46" onclick="move(4,6);"></td><td id="56" onclick="move(5,6);"></td><td id="66" onclick="move(6,6);"></td></tr>
+		</table>
+		It is the <span id="turn">Black Footed Ferret</span>'s turn.</br><span id="hunterMoved"></span></br>
+		<table id="UI">
+			<tr>
+				<td id="0Shader"><img id="ferret" src = "Black Footed Ferret.png" /></td>
+				<td>
+					Health:</br><span id = "animal0HP"></span></br></br>
+					Damage:</br>1-5</br></br>
+					Moves:</br>2</br>
+				</td> 
+			</tr>
+			
+			<tr>
+				<td  id="1Shader"><img id="rhino" src = "Black Rhino.png" /></td>
+				<td>
+					Health:</br><span id = "animal1HP"></span></br></br>
+					Damage:</br>5-15</br></br>
+					Moves:</br>1</br>
+				</td> 
+			</tr>
+			
+			<tr>
+				<td id="2Shader"><img id="leopard" src = "Amur Leopard.png" /></td>
+				<td>
+					Health:</br><span id = "animal2HP"></span></br></br>
+					Damage:</br>15-20</br></br>
+					Moves:</br>3</br>
+				</td> 
+			</tr>
+			
+			<tr>
+				<td id="3Shader"><img id="dog" src = "African Wild Dog.png" /></td>
+				<td>
+					Health:</br><span id = "animal3HP"></span></br></br>
+					Damage:</br>10</br></br>
+					Moves:</br>4</br>
+				</td> 
+			</tr>
+			
+			<tr>
+				<td><img id="poacher" src = "Poacher.png" /></td>
+				<td>
+					Health:</br><span id = "hunterHP"></span></br></br>
+					Damage:</br>15-20</br></br>
+					Moves:</br>2</br>
+				</td> 
+				
+			</tr>
+		</table>
+		<span id="damageDisplay"></span>
+		
+		<div id="abilities">
+			<button id="heal" onclick="heal();">Heal</button>You can Heal again in <span id="healCooldown">10</span> turns.</br>
+			<button id="tank" onclick="tank();">Tank</button>You can Tank again in <span id="tankCooldown">7</span> turns.</br>
+			<button id="pounce" onclick="pounce();">Pounce</button>You can Pounce again in <span id="pounceCooldown">7</span> turns.</br>
+			<button id="search" onclick="search();">Search</button>You can Search again in <span id="searchCooldown">5</span> turns.
+		</div>
+	</body>
+</html>
