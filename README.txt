@@ -1,1 +1,1 @@
-Open the FinalEVOLVE file in Google Chrome
+To play, open the HTP file with Google Chrome.
